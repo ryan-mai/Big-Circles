@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script src="script.js"></script>
+    
+    <title>Which One</title>
+  </head>
+  <body>
+    <div class="container text-center">
+      <form class="row" id="user-form">
+        <div class="col-6">
+          <input id="username-input" type="text" placeholder="Enter your username">
+        </div>
+        <div class="col-2">
+          <input class="btn btn-primary" type="submit" value="Update Username">
+        </div>
+      </form>
+      
+      <form class="row" id="messsages-form">
+        <div class="col-6">
+          <input id="user-message" type="text" placeholder="Enter your message">
+        </div>
+        <div class="col-2">
+          <input class="btn btn-primary" type="submit" value="Send Message">
+        </div>
+      </form>
+      <div class="col-12">
+        <ul class="list-group" id="messages">
+
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
