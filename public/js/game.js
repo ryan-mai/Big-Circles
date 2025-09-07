@@ -6,18 +6,6 @@ const socket = io('http://localhost:3000', {
         meaningOfLife: 42,
     }
 })
-socket.on('welcome', data=>{
-console.log(data)
-})
-socket.on('state', (state) => {
-    window.serverState = state;
-    // const myServer = state.players.find(p => p.id == socket.id);
-    // if (myServer) {
-    //     player.x = myServer.x;
-    //     player.y = myServer.y
-    //     player.radius = myServer.radius;
-    // }
-})
 document.addEventListener('DOMContentLoaded', (e) => {
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -47,6 +35,28 @@ document.addEventListener('DOMContentLoaded', (e) => {
             Array.from({ length:gridRows }, () => [])
         ) 
 
+    socket.on('welcome', data=>{
+    console.log(data)
+    })
+    socket.on('score', (data) => {
+        console.log(data)
+    })
+    socket.on('state', (state) => {
+        window.serverState = state;
+        const myServer = state.players.find(p => p.id == socket.id);
+        if (myServer) {
+            player.x = myServer.x;
+            player.y = myServer.y
+            player.radius = myServer.radius;
+        }
+    })
+
+    socket.on('playerEaten', data => {
+        console.log(data);
+    })
+    socket.on('playerRespawn', data => {
+        console.log(data);
+    })        
         function spatialPartition() {
             for (let col = 0; col < gridCols; col ++) {
                 for (let row = 0; row < gridRows; row++) {
@@ -77,6 +87,7 @@ document.addEventListener('DOMContentLoaded', (e) => {
                 }
             }
         }
+
         function checkCollision() {
             const playerCol = Math.floor(player.x / cellSize);
             const playerRow = Math.floor(player.y / cellSize);
@@ -153,6 +164,7 @@ document.addEventListener('DOMContentLoaded', (e) => {
 
             let offsetX = canvas.width / 2 - player.x;
             let offsetY = canvas.height / 2 - player.y;
+            const shapeOrder = [];
 
             const foods = (window.serverState && window.serverState.foods) || [];
             foods.forEach(f => {
@@ -166,15 +178,30 @@ document.addEventListener('DOMContentLoaded', (e) => {
             const others = (window.serverState && window.serverState.players) || [];
             others.forEach(p => {
                 if (p.id == socket.id) return;
-                ctx.fillStyle = p.color || 'orange';
+                shapeOrder.push({
+                    type: 'player',
+                    x: p.x,
+                    y: p.y,
+                    radius: p.radius,
+                    color: p.color || 'orange',
+                    z:p.radius                    
+                })
+            })
+            shapeOrder.push({
+                type: 'player',
+                x: player.x,
+                y: player.y,
+                radius: player.radius,
+                color: 'lime',
+                z: player.radius                    
+            })
+            shapeOrder.sort((a, b) => a.z - b.z)
+            shapeOrder.forEach(item => {
+                ctx.fillStyle = item.color;
                 ctx.beginPath();
-                ctx.arc(p.x + offsetX, p.y + offsetY, p.radius, 0, Math.PI * 2);
+                ctx.arc(item.x + offsetX, item.y + offsetY, item.radius, 0, Math.PI * 2)
                 ctx.fill();
             })
-            ctx.fillStyle = "lime";
-            ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height / 2, player.radius, 0, Math.PI*2)
-            ctx.fill();
         }
 
         function gameLoop() {
@@ -186,7 +213,7 @@ document.addEventListener('DOMContentLoaded', (e) => {
 
         gameLoop();
     } else {
-        alert('The game doesn\'t support your outdated browser :(');
+        alert('The game doesn\'t support your outdated browser :( what are you using dawg');
     }
 
 });

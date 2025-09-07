@@ -43,6 +43,7 @@ io.on('connection', (socket) => {
         input: { cursor: null }
     };
     players.set(socket.id, player)
+    console.log(players)
     console.log(socket.id, "has joined the server! YAYYYY!");
     socket.emit('welcome', { id: socket.id });
     socket.on('input', (data) => { 
@@ -58,11 +59,6 @@ io.on('connection', (socket) => {
         console.log(`${player} left my amazing game :(`);
     });
 })
-function eatPlayer() {
-    for (const player of players.values()) {
-        console.log(player.radius);
-    }
-}
 function move() {
     for (const player of players.values()) {
         const input = player.input || {};
@@ -83,10 +79,55 @@ function move() {
             }            
         }
         player.x = Math.max(player.radius, Math.min(MAP.width - player.radius, player.x));
-        player.y = Math.max(player.radius, Math.min(MAP.height - player.radius, player.y));
+        player.y = Math.max(player.radius, Math.min(MAP.height - player.radius, player.y));        
     }
 }
 
+function respawnPlayer(id) {
+    const newPlayer = {
+        id: id,
+        x: Math.floor(Math.random() * MAP.width),
+        y: Math.floor(Math.random() * MAP.height),
+        radius: 15,
+        speed: 4,
+        input: { cursor: null }
+    };
+    players.set(id, newPlayer);
+    io.emit('playerRespawn', { 
+        id: id,
+        x: newPlayer.x,
+        y: newPlayer.y,
+        radius: newPlayer.radius,
+        speed: newPlayer.speed,
+    })
+}
+
+function eatPlayer() {
+    for (const player of players.values()) {
+        const playerCol = Math.floor(player.x / CELLSIZE);
+        const playerRow = Math.floor(player.y / CELLSIZE);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                const col = playerCol + dx;
+                const row = playerRow + dy;
+                if (col >= 0 && col < gridCols && row >= 0 && row < gridRows) {
+                    for (const other of players.values()) {
+                        if (other.id == player.id) continue;
+                        const dist = Math.hypot(player.x - other.x, player.y - other.y);
+                        if (player.radius >= dist + other.radius && player.radius > other.radius * 1.2) {
+                            const growthFactor = other.radius * 0.1
+                            player.radius += growthFactor;
+                            player.speed -= growthFactor * 0.01;
+                            players.delete(other.id)
+                            io.emit('playerEaten', { eaterId: player.id, eatenId: other.id });
+                            respawnPlayer(other.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 function respawnFood(n = 1) {
     for (let i = 0 ; i < n; i++) {
@@ -119,17 +160,15 @@ function spatialPartition() {
 }
 
 spatialPartition();
-eatPlayer()        
 
 function checkCollision() {
     for (const player of players.values()) {
-    const playerCol = Math.floor(player.x / CELLSIZE);
-    const playerRow = Math.floor(player.y / CELLSIZE);
-
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            const col = playerCol + dx;
-            const row = playerRow + dy;
+        const playerCol = Math.floor(player.x / CELLSIZE);
+        const playerRow = Math.floor(player.y / CELLSIZE);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                const col = playerCol + dx;
+                const row = playerRow + dy;
                 if (col >= 0 && col < gridCols && row >= 0 && row < gridRows) {
                     const cell = grid[col][row];
                     for (let j = cell.length - 1; j >= 0; j --){
@@ -160,6 +199,7 @@ function checkCollision() {
 
 function step() {
     move();
+    eatPlayer();
     checkCollision();
 
     const snap = { 
