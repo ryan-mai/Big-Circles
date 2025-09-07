@@ -8,7 +8,15 @@ const socket = io('http://localhost:3000', {
 })
 socket.on('welcome', data=>{
 console.log(data)
-socket.emit('thanks', 'skibdi gyatttt')
+})
+socket.on('state', (state) => {
+    window.serverState = state;
+    // const myServer = state.players.find(p => p.id == socket.id);
+    // if (myServer) {
+    //     player.x = myServer.x;
+    //     player.y = myServer.y
+    //     player.radius = myServer.radius;
+    // }
 })
 document.addEventListener('DOMContentLoaded', (e) => {
     const canvas = document.getElementById('game');
@@ -31,7 +39,6 @@ document.addEventListener('DOMContentLoaded', (e) => {
             radius: 5 + Math.random(),
             color: `hsl(${Math.random() * 360}, 70%, 50%)`
         }));
-
         const cellSize = 100;
         const gridCols = Math.ceil(map.width / cellSize);
         const gridRows = Math.ceil(map.height / cellSize);
@@ -96,8 +103,6 @@ document.addEventListener('DOMContentLoaded', (e) => {
                                 const growthFactor = Math.max(minFactor, Math.min(maxFactor, k/ player.radius));
                                 player.radius += f.radius * growthFactor
                                 player.speed -= growthFactor * 0.01
-                                console.log(player.radius, player.speed)
-                                socket.emit('score', player.radius)
                                 respawnFood(1)
                             }
                         }
@@ -105,7 +110,6 @@ document.addEventListener('DOMContentLoaded', (e) => {
                 }
             }
         }
-        console.log(player)
         let lastCursorPos = null;
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect(); 
@@ -117,10 +121,6 @@ document.addEventListener('DOMContentLoaded', (e) => {
                 x: Math.max(0, Math.min(map.width, globalX)),
                 y: Math.max(0, Math.min(map.height, globalY))
             }
-
-            // console.log(`Cursor: (${lastCursorPos.x.toFixed(2)}, ${lastCursorPos.y.toFixed(2)}`)
-            // console.log(`Player: (${player.x}, ${player.y})`)
-            // cursor = true;
         })
 
         function getCursorPos() {
@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', (e) => {
         }
 
         function updatePos() {
+            socket.emit('input', { cursor: lastCursorPos })
             const cursorPos = getCursorPos();
             if (cursorPos) {
                 let dx = cursorPos.x - player.x;
@@ -153,32 +154,28 @@ document.addEventListener('DOMContentLoaded', (e) => {
             let offsetX = canvas.width / 2 - player.x;
             let offsetY = canvas.height / 2 - player.y;
 
-            food.forEach(f => {
-                ctx.fillstyle = f.color;
+            const foods = (window.serverState && window.serverState.foods) || [];
+            foods.forEach(f => {
+                if (!f) return;
+                ctx.fillStyle = f.color;
                 ctx.beginPath();
                 ctx.arc(f.x + offsetX, f.y + offsetY, f.radius, 0, Math.PI * 2);
                 ctx.fill();
             })
 
+            const others = (window.serverState && window.serverState.players) || [];
+            others.forEach(p => {
+                if (p.id == socket.id) return;
+                ctx.fillStyle = p.color || 'orange';
+                ctx.beginPath();
+                ctx.arc(p.x + offsetX, p.y + offsetY, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            })
             ctx.fillStyle = "lime";
             ctx.beginPath();
             ctx.arc(canvas.width / 2, canvas.height / 2, player.radius, 0, Math.PI*2)
             ctx.fill();
         }
-
-        // function eat() {
-        //     food.forEach((food) => {
-        //         x1 = food.x;
-        //         y1 = food.y;
-        //         x2 = player.x;
-        //         y2 = player.y;
-
-        //         d = Math.SQRT2(Math.pow((x2-x1), 2)+Math.pow((y2-y1), 2));
-        //         if (player.radius > (food.radius + d)){
-        //             console.log('Ate food!')
-        //         }
-        //     });
-        // }
 
         function gameLoop() {
             updatePos();
