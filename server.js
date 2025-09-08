@@ -9,7 +9,10 @@ const PORT = 3000
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-    cors: { origin: 'http://localhost:3000' }
+    cors: {
+        origin: 'http://localhost:3000',
+        methods: ['GET', 'POST'],
+    }
 });
 
 const MAP = { width: 4000, height: 4000 };
@@ -34,31 +37,40 @@ const players = new Map();
 
 
 io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
     const player = { 
         id: socket.id,
         x: Math.floor(Math.random() * MAP.width),
         y: Math.floor(Math.random() * MAP.height),
         radius: 15,
         speed: 4,
-        input: { cursor: null }
+        name: 'Unnamed Cell',
+        input: { cursor: null },
     };
-    players.set(socket.id, player)
-    console.log(players)
-    console.log(socket.id, "has joined the server! YAYYYY!");
+    players.set(socket.id, player);
     socket.emit('welcome', { id: socket.id });
+
+    socket.on('addPlayer', (data, cb) => {
+        const name = String(data || 'Unnamed cell').slice(0, 24);
+        const p = players.get(socket.id);
+        if (p) {
+            p.name = name;
+        }
+        if (typeof cb === 'function') cb({ ok: true });
+    });
+
     socket.on('input', (data) => { 
         const p = players.get(socket.id);
         if (p && data && typeof data == 'object') {
             p.input = data;
         }
     });
-    
-    
+
     socket.on('disconnect', () => {
-        players.delete(socket.id)
-        console.log(`${player} left my amazing game :(`);
+        players.delete(socket.id);
+        console.log('Client disconnected:', socket.id);
     });
-})
+});
 function move() {
     for (const player of players.values()) {
         const input = player.input || {};
@@ -83,13 +95,14 @@ function move() {
     }
 }
 
-function respawnPlayer(id) {
+function respawnPlayer(id, name) {
     const newPlayer = {
         id: id,
         x: Math.floor(Math.random() * MAP.width),
         y: Math.floor(Math.random() * MAP.height),
         radius: 15,
         speed: 4,
+        name: name || 'Unnamed cell',
         input: { cursor: null }
     };
     players.set(id, newPlayer);
@@ -118,9 +131,11 @@ function eatPlayer() {
                             const growthFactor = other.radius * 0.1
                             player.radius += growthFactor;
                             player.speed -= growthFactor * 0.01;
+
+                            const oldName = other.name
                             players.delete(other.id)
                             io.emit('playerEaten', { eaterId: player.id, eatenId: other.id });
-                            respawnPlayer(other.id);
+                            respawnPlayer(other.id, oldName);
                         }
                     }
                 }
@@ -187,7 +202,8 @@ function checkCollision() {
                             const growthFactor = Math.max(minFactor, Math.min(maxFactor, k/ player.radius));
                             player.radius += f.radius * growthFactor
                             player.speed -= growthFactor * 0.01
-                            io.emit('score', { id: player.id, radius: player.radius })
+
+                            io.emit('score', { radius: player.radius })
                             respawnFood(1)
                         }
                     }
@@ -202,6 +218,8 @@ function step() {
     eatPlayer();
     checkCollision();
 
+    const sortPlayers = Array.from(players.values()).sort((a,b) => b.radius - a.radius);
+    const leaderboard = sortPlayers.slice(0, 10).map(p => ( { name: p.name, score: Math.round(p.radius) - 14 }))
     const snap = { 
         players: Array.from(players.values()).map(p=> ({ 
             id: p.id,
@@ -209,7 +227,8 @@ function step() {
             y: p.y,
             radius: p.radius,
         })),
-        foods: food
+        foods: food,
+        leaderboard: leaderboard,
     }
     io.emit('state', snap);
 }

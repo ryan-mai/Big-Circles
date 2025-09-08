@@ -9,32 +9,14 @@
     <script src="/socket.io/socket.io.min.js"></script>
     <script src="script.js"></script>
     
-    <title>Which One</title>
+    <title>The Biggest Menace</title>
   </head>
-  <body>
+  <body style="background-color: #1c1c1c;">
     <div class="container text-center">
-      <form class="row" id="user-form">
-        <div class="col-6">
-          <input id="username-input" type="text" placeholder="Enter your username">
-        </div>
-        <div class="col-2">
-          <input class="btn btn-primary" type="submit" value="Update Username">
-        </div>
+      <form class="d-flex flex-column align-items-center" id="user-form">
+          <input id="user-input" type="text" class="form-control mb-2 rounded-pill text-center" style="max-width: 300px;" placeholder="Legoat James">
+          <input class="btn btn-primary rounded-pill" type="submit" style="width: 300px;" value="Play Game">
       </form>
-      
-      <form class="row" id="messsages-form">
-        <div class="col-6">
-          <input id="user-message" type="text" placeholder="Enter your message">
-        </div>
-        <div class="col-2">
-          <input class="btn btn-primary" type="submit" value="Send Message">
-        </div>
-      </form>
-      <div class="col-12">
-        <ul class="list-group" id="messages">
-
-        </ul>
-      </div>
     </div>
   </body>
 </html>
